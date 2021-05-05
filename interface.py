@@ -101,6 +101,8 @@ class Main_window:
         self.calibration_deploy = False
         self.script_deploy = False
         
+        self.script_running_mode = 3
+        
         #IP
         self.ip_entry = tk.Entry(self.root, text="enter robot ip")
         #self.ip_entry.grid (row=0, column=0)
@@ -124,12 +126,19 @@ class Main_window:
 
 	#SCRIPT
         self.script_button = tk.Button (self.root, text="script offline", command = self.script, height=3, width = 25)
-        self.script_button.pack(side="bottom", padx=10, pady=10)
+        self.script_button.pack(padx=10, pady=10)
         
         self.close_button = tk.Button (self.root, text = "Закрыть", command = self.join_and_exit, height=3, width = 25)
         self.close_button.pack(side="bottom", expand="no", padx=10, pady=10)
         #self.close_button.grid (row=7, column=2)
+
+        Hmin = tk.StringVar()
+        self.mode_slider = tk.Scale(self.root, from_=1, to=3, orient=tk.HORIZONTAL, variable=Hmin, width=15, command=lambda val : self.change_mode(val))
+        self.mode_slider.set(self.script_running_mode)
+        self.mode_slider.pack(side="bottom", expand="no", padx=10, pady=10)
         
+        #w1.place(x=70, y=70)        
+
         self.panel = None
 
         self.stopEvent = threading.Event()
@@ -139,10 +148,15 @@ class Main_window:
         #self.root.wm_title("PyImageSearch PhotoBooth")
         self.root.wm_protocol("WM_DELETE_WINDOW", self.join_and_exit)
 
-        
         #self.idle ()
 
+    def change_mode(self, new_mode):
+        self.script_running_mode = new_mode
+        #print("new mode", self.script_running_mode)
+
     def videoLoop(self):
+        #print(self.script_running_mode)
+    
         # DISCLAIMER:
         # I'm not a GUI developer, nor do I even pretend to be. This
         # try/except statement is a pretty ugly hack to get around
@@ -152,7 +166,12 @@ class Main_window:
             while not self.stopEvent.is_set():
                 # grab the frame from the video stream and resize it to
                 # have a maximum width of 300 pixels
-                _, self.frame = self.cap.read()
+                ret, self.frame = self.cap.read()
+                
+                if (ret == False):
+                    #print("cannot read frame, exiting")
+                    break
+                
                 #self.frame = imutils.resize(self.frame, width=400)
 
                 # OpenCV represents images in BGR order; however PIL
@@ -243,7 +262,7 @@ class Main_window:
     	    self.script_button.configure(text = "calibration offline")
     	
     	else:
-    	    os.system("python3 /home/aidalab/cruzhochki/rcognita/main_3wrobot_ros.py --init_x 2 --init_y 2 --init_alpha 3.14 --dt 0.1 --Nactor 8 --pred_step_size 9 --mode 3")
+    	    os.system("python3 /home/aidalab/cruzhochki/rcognita/main_3wrobot_ros.py --init_x 2 --init_y 2 --init_alpha 3.14 --dt 0.1 --Nactor 8 --pred_step_size 9 --mode " + str(self.script_running_mode))
     	    
     	    self.script_deploy = True
     	    
@@ -260,12 +279,12 @@ class Main_window:
 
     def join_and_exit (self):
         self.cap.release()
-        
+        self.thread.join()
         self.root.quit ()
 
 def main():
     root = tk.Tk()
-    root.geometry("1530x1080")
+    root.geometry("1430x880")
 
     lmain = tk.Label(root)
     lmain.pack(side="left", padx=10, pady=10)
